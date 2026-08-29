@@ -17,6 +17,8 @@ export type CurriculumReference = {
   source_validation_html: string;
   source_map_html: string;
   readiness_html: string;
+  comparison_tables_html: string;
+  final_checklist_html: string;
 };
 
 let cached: CurriculumReference | null = null;
@@ -32,6 +34,8 @@ export function getCurriculumReference(): CurriculumReference {
     source_validation_html: data.source_validation_html,
     source_map_html: data.source_map_html,
     readiness_html: data.readiness_html,
+    comparison_tables_html: data.comparison_tables_html,
+    final_checklist_html: data.final_checklist_html,
   };
   return cached;
 }

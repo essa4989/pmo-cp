@@ -93,6 +93,43 @@ h4,
 }
 
 /* Rendered rich lesson content coming from the curriculum HTML */
+.lesson-content h3 {
+  font-family: var(--font-arabic);
+  font-size: 1.1rem;
+  color: var(--brand-900);
+  margin: 1.4rem 0 0.6rem;
+  padding-inline-start: 0.7rem;
+  border-inline-start: 4px solid var(--gold-500);
+}
+.lesson-content .grid {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+.lesson-content .g2 {
+  grid-template-columns: 1fr 1fr;
+}
+.lesson-content .g3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+@media (max-width: 640px) {
+  .lesson-content .g2,
+  .lesson-content .g3 {
+    grid-template-columns: 1fr;
+  }
+}
+.lesson-content .card {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--brand-600);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+.lesson-content .card h4 {
+  border: none;
+  padding: 0;
+  margin: 0 0 0.3rem;
+}
 .lesson-content h4 {
   font-family: var(--font-arabic);
   font-size: 1.02rem;

@@ -5,18 +5,25 @@ import { Card, Badge } from "@/components/ui";
 import { chooseStudyPlan, resetStudyPlan } from "@/lib/actions/planner";
 import { STUDY_PLANS, dayNumberSince, findTodayRange } from "@/lib/studyplans";
 import type { StudyPlanLength } from "@/lib/enums";
+import StudyReminders from "@/components/StudyReminders";
+import { pushConfigured } from "@/lib/push";
 
 export const metadata = { title: "خطّتي الزمنية" };
 
 export default async function PlannerPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  const remindersConfigured = pushConfigured();
 
   if (!user.studyPlan || !user.studyPlanStart) {
     return (
       <div className="mx-auto max-w-4xl">
         <h1 className="font-display text-xl font-bold text-ink">اختر خطّتك الزمنية</h1>
         <p className="mt-1 text-sm text-muted">اختر الوتيرة التي تناسب وقتك — يمكنك تغييرها لاحقاً.</p>
+
+        <Card className="mt-5">
+          <StudyReminders serverConfigured={remindersConfigured} />
+        </Card>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {(Object.entries(STUDY_PLANS) as [StudyPlanLength, (typeof STUDY_PLANS)["DAYS_30"]][]).map(
@@ -82,6 +89,10 @@ export default async function PlannerPage() {
       <p className="ltr-num mt-1 text-sm text-muted">
         Day {Math.min(dayNumber, plan.days)} / {plan.days}
       </p>
+
+      <Card className="mt-5">
+        <StudyReminders serverConfigured={remindersConfigured} />
+      </Card>
 
       <Card className="mt-5">
         <div className="text-xs font-semibold text-brand-600">مهام اليوم — Today&apos;s Tasks</div>

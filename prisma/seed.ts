@@ -272,7 +272,7 @@ async function main() {
     });
   }
 
-  console.log("Seeding flashcards from glossary...");
+  console.log("Seeding flashcards from glossary and exam traps...");
   await prisma.flashcard.deleteMany({});
   const glossaryTerms = await prisma.glossaryTerm.findMany();
   const domainIdByOrder = [1, 2, 3, 4, 5, 6];
@@ -283,6 +283,19 @@ async function main() {
       data: {
         front: `${g.termAr} (${g.termEn})`,
         back: g.definition,
+        domainId,
+      },
+    });
+  }
+
+  const examTraps = await prisma.examTrap.findMany({ orderBy: { n: "asc" } });
+  for (let i = 0; i < examTraps.length; i++) {
+    const t = examTraps[i];
+    const domainId = domainIdByOrder[i % domainIdByOrder.length];
+    await prisma.flashcard.create({
+      data: {
+        front: `فخّ الامتحان: ${t.trap}`,
+        back: `الخيار الجذّاب الخاطئ: ${t.wrongChoice}\nالمنطق الصحيح: ${t.correctLogic}`,
         domainId,
       },
     });

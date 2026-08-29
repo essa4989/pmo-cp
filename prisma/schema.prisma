@@ -27,12 +27,25 @@ model User {
   longestStreak   Int      @default(0)
   lastStudyDate   DateTime?
 
-  lessonProgress   UserLessonProgress[]
-  questionAttempts UserQuestionAttempt[]
-  examAttempts     ExamAttempt[]
-  bookmarks        Bookmark[]
-  flashcardStates  UserFlashcardState[]
-  diagnostics      DiagnosticResult[]
+  lessonProgress    UserLessonProgress[]
+  questionAttempts  UserQuestionAttempt[]
+  examAttempts      ExamAttempt[]
+  bookmarks         Bookmark[]
+  flashcardStates   UserFlashcardState[]
+  diagnostics       DiagnosticResult[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ─────────────────────────── Curriculum content ───────────────────────────

@@ -41,9 +41,24 @@ export default async function ExamStrategyPage() {
       </div>
 
       <div className="mt-8">
+        <h2 className="font-display text-base font-bold text-ink">جداول المقارنة — أعلى عائد قبل الامتحان</h2>
+        <p className="mt-1 text-xs text-muted">مفاهيم يكثر الخلط بينها في الأسئلة، مع كيفية التفريق بينها.</p>
+        <Card className="lesson-content mt-3">
+          <div dangerouslySetInnerHTML={{ __html: ref.comparison_tables_html }} />
+        </Card>
+      </div>
+
+      <div className="mt-8">
         <h2 className="font-display text-base font-bold text-ink">استراتيجية يوم الامتحان</h2>
         <Card className="lesson-content mt-3">
           <div dangerouslySetInnerHTML={{ __html: ref.strategy_html }} />
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="font-display text-base font-bold text-ink">القائمة النهائية قبل الحجز</h2>
+        <Card className="lesson-content mt-3">
+          <div dangerouslySetInnerHTML={{ __html: ref.final_checklist_html }} />
         </Card>
       </div>
     </div>

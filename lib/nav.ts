@@ -29,6 +29,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/case-studies", label: "معمل الحالات (PMO Case Lab)", section: "case-studies" },
       { href: "/glossary", label: "المسرد", section: "glossary" },
       { href: "/exam-strategy", label: "استراتيجية الامتحان وفخاخه", section: "exam-strategy" },
+      { href: "/assistant", label: "مساعد الدراسة الذكي", section: "assistant" },
     ],
   },
 ];

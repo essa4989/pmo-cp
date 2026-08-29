@@ -88,7 +88,7 @@ export default function FlashcardDeck({
             ) : (
               <>
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Back</span>
-                <p className="mt-3 text-sm leading-8 text-ink">{current.back}</p>
+                <p className="mt-3 whitespace-pre-line text-sm leading-8 text-ink">{current.back}</p>
                 {current.lessonTitle && (
                   <p className="mt-3 text-xs text-brand-600">مرتبطة بدرس: {current.lessonTitle}</p>
                 )}
