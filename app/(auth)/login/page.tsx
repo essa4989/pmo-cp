@@ -1,0 +1,66 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState } from "react";
+import { loginAction } from "@/lib/actions/auth";
+
+export default function LoginPage() {
+  const [state, formAction, pending] = useActionState(loginAction, undefined);
+
+  return (
+    <div>
+      <h1 className="font-display text-lg font-bold text-ink">تسجيل الدخول</h1>
+      <p className="mt-1 text-sm text-muted">أكمل رحلة التعلّم من حيث توقّفت.</p>
+
+      <form action={formAction} className="mt-6 flex flex-col gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-ink">البريد الإلكتروني</span>
+          <input
+            name="email"
+            type="email"
+            required
+            dir="ltr"
+            className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand-600"
+            placeholder="you@example.com"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-ink">كلمة المرور</span>
+          <input
+            name="password"
+            type="password"
+            required
+            dir="ltr"
+            className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand-600"
+            placeholder="••••••••"
+          />
+        </label>
+
+        {state?.error && (
+          <p className="rounded-lg bg-[var(--bad-bg)] px-3 py-2 text-sm text-[var(--bad)]">
+            {state.error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="mt-1 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-60"
+        >
+          {pending ? "جارٍ الدخول..." : "دخول"}
+        </button>
+      </form>
+
+      <div className="mt-5 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted">
+        للتجربة السريعة: <span className="ltr-num">student@pmocp.academy / Student@12345</span>
+      </div>
+
+      <p className="mt-5 text-center text-sm text-muted">
+        ليس لديك حساب؟{" "}
+        <Link href="/register" className="font-semibold text-brand-700">
+          إنشاء حساب جديد
+        </Link>
+      </p>
+    </div>
+  );
+}

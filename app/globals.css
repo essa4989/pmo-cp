@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef2f5;
+  --ink: #14212b;
+  --muted: #5b6b76;
+  --line: #dde5ea;
+
+  --brand-950: #041b24;
+  --brand-900: #0a2a35;
+  --brand-800: #0f3d4d;
+  --brand-700: #155268;
+  --brand-600: #1c6c85;
+  --brand-500: #2586a3;
+  --brand-100: #e2f0f4;
+
+  --gold-700: #8a5a2b;
+  --gold-500: #c08a3e;
+  --gold-300: #e4bd82;
+
+  --ok: #16794a;
+  --ok-bg: #e6f4ec;
+  --warn: #93650a;
+  --warn-bg: #fdf3e0;
+  --bad: #b3122a;
+  --bad-bg: #fbe7ea;
+  --info: #3d4fae;
+  --info-bg: #eaecf8;
+
+  --radius: 12px;
+  --font-arabic: "Noto Kufi Arabic", "Noto Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Noto Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-num: "Barlow Semi Condensed", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand-950: var(--brand-950);
+  --color-brand-900: var(--brand-900);
+  --color-brand-800: var(--brand-800);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
+  --color-brand-500: var(--brand-500);
+  --color-brand-100: var(--brand-100);
+  --color-gold-700: var(--gold-700);
+  --color-gold-500: var(--gold-500);
+  --color-gold-300: var(--gold-300);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
+  --font-arabic: var(--font-arabic);
+  --font-body: var(--font-body);
+  --font-num: var(--font-num);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-arabic);
+}
+
+.ltr-num {
+  font-family: var(--font-num);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Rendered rich lesson content coming from the curriculum HTML */
+.lesson-content h4 {
+  font-family: var(--font-arabic);
+  font-size: 1.02rem;
+  color: var(--brand-800);
+  margin: 1.1rem 0 0.4rem;
+  padding-inline-start: 0.6rem;
+  border-inline-start: 3px solid var(--brand-600);
+}
+.lesson-content p {
+  margin-bottom: 0.55rem;
+  font-size: 0.95rem;
+}
+.lesson-content ul,
+.lesson-content ol {
+  margin: 0 0 0.7rem;
+  padding-inline-start: 1.4rem;
+  font-size: 0.95rem;
+}
+.lesson-content li {
+  margin-bottom: 0.3rem;
+}
+.lesson-content .en {
+  font-family: var(--font-num);
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  color: var(--muted);
+}
+.lesson-content .trap {
+  border: 1px dashed var(--bad);
+  background: var(--bad-bg);
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  margin: 0.7rem 0;
+  font-size: 0.9rem;
+}
+.lesson-content .trap h4 {
+  color: var(--bad);
+  border: none;
+  padding: 0;
+  margin-top: 0;
+}
+.lesson-content .recall {
+  border: 1px solid var(--info);
+  border-inline-start: 4px solid var(--info);
+  background: var(--info-bg);
+  padding: 0.7rem 0.9rem;
+  border-radius: 0 8px 8px 0;
+  margin: 0.7rem 0;
+  font-size: 0.9rem;
+}
+.lesson-content .recall h4 {
+  color: var(--info);
+  border: none;
+  padding: 0;
+  margin-top: 0;
+}
+.lesson-content .ans {
+  background: var(--ok-bg);
+  border-inline-start: 4px solid var(--ok);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0 8px 8px 0;
+  margin: 0.5rem 0;
+  font-size: 0.88rem;
+}
+.lesson-content .box {
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--brand-600);
+  background: var(--surface-2);
+  padding: 0.6rem 0.9rem;
+  border-radius: 0 8px 8px 0;
+  margin: 0.6rem 0;
+  font-size: 0.9rem;
+}
+.lesson-content .tag {
+  font-family: var(--font-num);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  padding: 1px 7px;
+  border-radius: 4px;
+  direction: ltr;
+  display: inline-block;
+  margin-inline-end: 4px;
+  background: var(--brand-700);
+  color: #fff;
+}
+.lesson-content .tag.t-unv {
+  background: var(--bad);
+}
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 0.6rem 0;
+}
+.lesson-content th,
+.lesson-content td {
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: start;
+}
+.lesson-content thead th {
+  background: var(--brand-800);
+  color: #fff;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}

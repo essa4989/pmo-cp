@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Users ───────────────────────────
+// NOTE: SQLite has no native enum support in Prisma, so enum-like fields are
+// plain strings constrained at the application layer (see lib/enums.ts).
+// Role: STUDENT | ADMIN
+// StudyPlanLength: DAYS_30 | DAYS_60 | DAYS_90
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("STUDENT")
+  createdAt    DateTime @default(now())
+
+  studyPlan       String?
+  studyPlanStart  DateTime?
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastStudyDate   DateTime?
+
+  lessonProgress   UserLessonProgress[]
+  questionAttempts UserQuestionAttempt[]
+  examAttempts     ExamAttempt[]
+  bookmarks        Bookmark[]
+  flashcardStates  UserFlashcardState[]
+  diagnostics      DiagnosticResult[]
+}
+
+// ─────────────────────────── Curriculum content ───────────────────────────
+
+model Domain {
+  id                     Int    @id // 0 = orientation module, 1-6 = official domains
+  code                   String @unique
+  titleAr                String
+  titleEn                String
+  weightPct              Int // official exam weight, 0 for orientation
+  approxQuestionsOfficial Int   @default(0)
+  order                  Int
+  colorToken             String @default("teal")
+
+  tasks     Task[]
+  lessons   Lesson[]
+  questions Question[]
+}
+
+model Task {
+  id          String @id @default(cuid())
+  domainId    Int
+  domain      Domain @relation(fields: [domainId], references: [id])
+  code        String // e.g. "1.T1"
+  titleAr     String
+  titleEn     String
+  lessonsRef  String // human readable lesson codes, e.g. "1.1 · 1.6"
+  order       Int
+
+  lessons Lesson[]
+
+  @@unique([domainId, code])
+}
+
+model Lesson {
+  id           String @id @default(cuid())
+  domainId     Int
+  domain       Domain @relation(fields: [domainId], references: [id])
+  taskId       String?
+  task         Task?  @relation(fields: [taskId], references: [id])
+  module       Int
+  number       Int
+  code         String @unique // "1.1"
+  titleAr      String
+  titleEn      String
+  summaryAr    String
+  keyFactsAr   String
+  contentHtml  String // sanitized rich HTML: concept / why it matters / PMI perspective / example / trap / active recall
+  order        Int
+  durationMin  Int    @default(12)
+
+  progress    UserLessonProgress[]
+  caseStudies CaseStudy[]
+  flashcards  Flashcard[]
+
+  @@index([domainId])
+}
+
+model CaseStudy {
+  id       String @id @default(cuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id])
+  titleAr  String
+  bodyHtml String // authored "PMO Scenario" content extracted from the verified curriculum
+  order    Int    @default(0)
+}
+
+model Source {
+  id               String   @id @default(cuid())
+  name             String
+  type             String // PMI_OFFICIAL | PMI_REFERENCE | TRAINING | PMBOK7 | PMBOK8_SUPPORTING | ACADEMIC | UNVERIFIED
+  url              String?
+  verificationDate DateTime?
+  notes            String?
+}
+
+model GlossaryTerm {
+  id         String @id @default(cuid())
+  termAr     String
+  termEn     String
+  definition String
+  sourceTag  String
+  order      Int    @default(0)
+}
+
+model ExamTrap {
+  id            String @id @default(cuid())
+  n             Int
+  trap          String
+  wrongChoice   String
+  correctLogic  String
+}
+
+// ─────────────────────────── Assessment ───────────────────────────
+
+model Question {
+  id            Int    @id
+  domainId      Int
+  domain        Domain @relation(fields: [domainId], references: [id])
+  taskNumber    Int
+  level         String // تذكّر / تطبيق / تحليل
+  questionText  String
+  optionsJson   String // JSON string array of 4 options
+  answerIndex   Int
+  rationale     String
+  sourceTag     String @default("TRAINING")
+
+  attempts        UserQuestionAttempt[]
+  bookmarks       Bookmark[]
+  examQuestions   ExamAttemptQuestion[]
+
+  @@index([domainId, taskNumber])
+}
+
+// AttemptMode: PRACTICE | DOMAIN_QUIZ | EXAM_MODE | MOCK_EXAM
+// AttemptStatus: IN_PROGRESS | SUBMITTED
+
+model ExamAttempt {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  mode           String
+  domainId       Int? // set for domain-scoped quizzes
+  mockSetNumber  Int? // 1 | 2 | 3, set when mode = MOCK_EXAM
+  startedAt      DateTime @default(now())
+  submittedAt    DateTime?
+  durationSec    Int? // time limit in seconds, null = untimed
+  status         String   @default("IN_PROGRESS")
+  totalQuestions Int
+  correctCount   Int      @default(0)
+  scorePct       Int      @default(0)
+
+  questions ExamAttemptQuestion[]
+}
+
+model ExamAttemptQuestion {
+  id              String      @id @default(cuid())
+  attemptId       String
+  attempt         ExamAttempt @relation(fields: [attemptId], references: [id])
+  questionId      Int
+  question        Question    @relation(fields: [questionId], references: [id])
+  order           Int
+  selectedIndex   Int?
+  markedForReview Boolean     @default(false)
+  correct         Boolean?
+
+  @@unique([attemptId, questionId])
+}
+
+model UserQuestionAttempt {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  questionId    Int
+  question      Question    @relation(fields: [questionId], references: [id])
+  selectedIndex Int
+  correct       Boolean
+  mode          String
+  createdAt     DateTime    @default(now())
+
+  @@index([userId, questionId])
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, questionId])
+}
+
+// ─────────────────────────── Progress ───────────────────────────
+
+// LessonStatus: NOT_STARTED | IN_PROGRESS | COMPLETED
+
+model UserLessonProgress {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  lessonId         String
+  lesson           Lesson   @relation(fields: [lessonId], references: [id])
+  status           String   @default("NOT_STARTED")
+  quickCheckPassed Boolean  @default(false)
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  @@unique([userId, lessonId])
+}
+
+model DiagnosticResult {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  takenAt            DateTime @default(now())
+  domainScoresJson   String // { "1": 60, "2": 40, ... }
+  weakDomainsJson    String // [3,5]
+  strongDomainsJson  String // [1,6]
+}
+
+// ─────────────────────────── Flashcards (spaced repetition) ───────────────────────────
+
+model Flashcard {
+  id       String  @id @default(cuid())
+  front    String
+  back     String
+  domainId Int
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id])
+
+  states UserFlashcardState[]
+}
+
+model UserFlashcardState {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  flashcardId String
+  flashcard   Flashcard @relation(fields: [flashcardId], references: [id])
+  easeFactor  Float     @default(2.5)
+  intervalDays Int      @default(0)
+  reps        Int       @default(0)
+  dueAt       DateTime  @default(now())
+  lastResult  String? // AGAIN | HARD | GOOD | EASY
+
+  @@unique([userId, flashcardId])
+}
