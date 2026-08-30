@@ -117,10 +117,15 @@ Readiness% = 0.45 × (دقّة الأسئلة، مرجّحة بوزن كل مج�
 
 ## ٦. التشغيل محلياً
 
+يحتاج التطبيق قاعدة بيانات PostgreSQL حقيقية (وليس SQLite) لأنها يجب أن تبقى محفوظة بين
+عمليات النشر على منصّات الاستضافة الحديثة.
+
 ```bash
 npm install
-npx prisma db push      # ينشئ dev.db بالسكيمة
-npm run db:seed         # يزرع كامل المنهج المدقَّق من content/curriculum.json
+cp .env.example .env         # ثم عدّل القيم حسب الحاجة
+docker compose up -d         # يشغّل PostgreSQL محلياً على docker-compose.yml
+npx prisma db push           # ينشئ الجداول في قاعدة البيانات
+npm run db:seed              # يزرع كامل المنهج المدقَّق من content/curriculum.json
 npm run dev
 ```
 
