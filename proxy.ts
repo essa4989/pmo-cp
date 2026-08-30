@@ -11,11 +11,15 @@ const PUBLIC_PATHS = [
   "/favicon.ico",
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (!siteAccessEnabled()) return NextResponse.next();
 
   const { pathname } = request.nextUrl;
-  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/site-access")) {
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith("/api/site-access") ||
+    pathname.startsWith("/verify/")
+  ) {
     return NextResponse.next();
   }
 

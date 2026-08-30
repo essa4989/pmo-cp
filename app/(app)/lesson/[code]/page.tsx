@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { Badge, Card } from "@/components/ui";
 import MarkStarted from "@/components/MarkStarted";
 import QuickCheck from "@/components/QuickCheck";
+import MarkCompleteButton from "@/components/MarkCompleteButton";
+import { getLessonLockState } from "@/lib/progress";
 
 export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -41,6 +43,44 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
     candidateQuestions.find((q) => !attemptedIds.has(q.id)) ?? candidateQuestions[0] ?? null;
 
   const status = progress?.status ?? "NOT_STARTED";
+
+  // Sequential gating: a never-touched lesson stays locked until the one
+  // before it is completed. Lessons the learner already has progress on
+  // (from before this gate existed, or via the "already completed" retry)
+  // stay accessible regardless.
+  const { unlockedIds } = await getLessonLockState(user.id);
+  const locked = status === "NOT_STARTED" && !unlockedIds.has(lesson.id);
+
+  if (locked) {
+    const prevLesson = idx > 0 ? siblingLessons[idx - 1] : null;
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+          <Link href={`/course/${lesson.domainId}`} className="font-semibold text-brand-700 hover:underline">
+            {lesson.domain.titleAr}
+          </Link>
+          <span>/</span>
+          <span className="ltr-num">{lesson.code}</span>
+        </div>
+        <Card className="mt-4 text-center">
+          <div className="text-3xl">🔒</div>
+          <h1 className="font-display mt-2 text-lg font-bold text-ink">هذا الدرس مقفل حالياً</h1>
+          <p className="mt-2 text-sm text-muted">
+            أكمل الدرس السابق أولاً ({"التحقّق السريع"}) ليُفتح هذا الدرس — المسار مُصمَّم للتقدّم
+            بالترتيب.
+          </p>
+          {prevLesson && (
+            <Link
+              href={`/lesson/${prevLesson.code}`}
+              className="mt-4 inline-block rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              الذهاب إلى الدرس السابق
+            </Link>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -105,9 +145,11 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
             nextHref={nextLesson ? `/lesson/${nextLesson.code}` : null}
           />
         ) : (
-          <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm text-muted">
-            لا يتوفّر حالياً سؤال تحقّق سريع مرتبط مباشرة بهذا الدرس.
-          </div>
+          <MarkCompleteButton
+            lessonId={lesson.id}
+            alreadyCompleted={status === "COMPLETED"}
+            nextHref={nextLesson ? `/lesson/${nextLesson.code}` : null}
+          />
         )}
       </div>
 

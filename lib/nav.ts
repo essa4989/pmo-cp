@@ -12,6 +12,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/course", label: "المسار والمجالات", section: "course" },
       { href: "/progress", label: "تقدّمي وخريطة المعرفة", section: "progress" },
       { href: "/planner", label: "خطّتي الزمنية", section: "planner" },
+      { href: "/certificate", label: "شهادة الإتمام", section: "certificate" },
     ],
   },
   {

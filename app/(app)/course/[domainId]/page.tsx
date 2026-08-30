@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Card, ProgressBar, Badge } from "@/components/ui";
+import { getLessonLockState } from "@/lib/progress";
 
 export default async function DomainPage({
   params,
@@ -25,9 +26,12 @@ export default async function DomainPage({
   });
   if (!domain) notFound();
 
-  const progress = await prisma.userLessonProgress.findMany({
-    where: { userId: user.id, lessonId: { in: domain.lessons.map((l) => l.id) } },
-  });
+  const [progress, { unlockedIds }] = await Promise.all([
+    prisma.userLessonProgress.findMany({
+      where: { userId: user.id, lessonId: { in: domain.lessons.map((l) => l.id) } },
+    }),
+    getLessonLockState(user.id),
+  ]);
   const progressByLesson = new Map(progress.map((p) => [p.lessonId, p]));
 
   const completed = domain.lessons.filter((l) => progressByLesson.get(l.id)?.status === "COMPLETED").length;
@@ -113,22 +117,32 @@ export default async function DomainPage({
         <div className="mt-3 flex flex-col gap-2">
           {domain.lessons.map((l) => {
             const status = progressByLesson.get(l.id)?.status ?? "NOT_STARTED";
-            return (
-              <Link key={l.id} href={`/lesson/${l.code}`}>
-                <Card className="!p-4 transition hover:border-brand-500">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+            const locked = status === "NOT_STARTED" && !unlockedIds.has(l.id);
+            const content = (
+              <Card className={`!p-4 transition ${locked ? "opacity-60" : "hover:border-brand-500"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {locked ? (
+                      <span className="text-sm">🔒</span>
+                    ) : (
                       <StatusDot status={status} />
-                      <div>
-                        <div className="ltr-num text-[11px] font-semibold text-brand-600">{l.code}</div>
-                        <div className="text-sm font-semibold text-ink">{l.titleAr}</div>
-                      </div>
+                    )}
+                    <div>
+                      <div className="ltr-num text-[11px] font-semibold text-brand-600">{l.code}</div>
+                      <div className="text-sm font-semibold text-ink">{l.titleAr}</div>
                     </div>
-                    <Badge tone={status === "COMPLETED" ? "ok" : status === "IN_PROGRESS" ? "warn" : "muted"}>
-                      {status === "COMPLETED" ? "مكتمل" : status === "IN_PROGRESS" ? "قيد التقدّم" : "لم يبدأ"}
-                    </Badge>
                   </div>
-                </Card>
+                  <Badge tone={locked ? "muted" : status === "COMPLETED" ? "ok" : status === "IN_PROGRESS" ? "warn" : "muted"}>
+                    {locked ? "مقفل" : status === "COMPLETED" ? "مكتمل" : status === "IN_PROGRESS" ? "قيد التقدّم" : "لم يبدأ"}
+                  </Badge>
+                </div>
+              </Card>
+            );
+            return locked ? (
+              <div key={l.id}>{content}</div>
+            ) : (
+              <Link key={l.id} href={`/lesson/${l.code}`}>
+                {content}
               </Link>
             );
           })}
