@@ -6,7 +6,9 @@ import { Badge, Card } from "@/components/ui";
 import MarkStarted from "@/components/MarkStarted";
 import QuickCheck from "@/components/QuickCheck";
 import MarkCompleteButton from "@/components/MarkCompleteButton";
+import LessonListen from "@/components/LessonListen";
 import { getLessonLockState } from "@/lib/progress";
+import { lessonTextForSpeech } from "@/lib/tts";
 
 export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -114,6 +116,21 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
         <p className="mt-1 text-sm leading-7 text-ink">{lesson.summaryAr}</p>
         <p className="mt-2 text-xs leading-6 text-muted">{lesson.keyFactsAr}</p>
       </Card>
+
+      <div className="mt-4">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-700">
+          <span>🎧</span>
+          <span>استماع للدرس — خيار موازٍ للقراءة</span>
+        </div>
+        <LessonListen
+          text={lessonTextForSpeech({
+            titleAr: lesson.titleAr,
+            summaryAr: lesson.summaryAr,
+            keyFactsAr: lesson.keyFactsAr,
+            contentHtml: lesson.contentHtml,
+          })}
+        />
+      </div>
 
       <Card className="lesson-content mt-4">
         <div dangerouslySetInnerHTML={{ __html: lesson.contentHtml }} />
