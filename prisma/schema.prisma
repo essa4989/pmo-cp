@@ -45,6 +45,15 @@ model Certificate {
   issuedAt  DateTime @default(now())
 }
 
+model LessonPodcastAudio {
+  id         String   @id @default(cuid())
+  lessonCode String   @unique
+  mimeType   String   @default("audio/mpeg")
+  audioData  Bytes
+  script     String // JSON-encoded dialogue turns used to generate this audio
+  createdAt  DateTime @default(now())
+}
+
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
@@ -260,12 +269,19 @@ model DiagnosticResult {
 // ─────────────────────────── Flashcards (spaced repetition) ───────────────────────────
 
 model Flashcard {
-  id       String  @id @default(cuid())
-  front    String
-  back     String
-  domainId Int
-  lessonId String?
-  lesson   Lesson? @relation(fields: [lessonId], references: [id])
+  id        String  @id @default(cuid())
+  // Deterministic content key (e.g. "lesson:1.1:2", "glossary:...", "trap:7")
+  // so re-seeding upserts in place instead of deleting + recreating with a
+  // new id — which would orphan every learner's UserFlashcardState and
+  // crash the next deploy's seed step via the FK below. Nullable only so
+  // this column can be added to a database that already has Flashcard rows
+  // without a backfill migration; the seed retires any row still null.
+  sourceKey String? @unique
+  front     String
+  back      String
+  domainId  Int
+  lessonId  String?
+  lesson    Lesson? @relation(fields: [lessonId], references: [id])
 
   states UserFlashcardState[]
 }
@@ -275,7 +291,7 @@ model UserFlashcardState {
   userId      String
   user        User      @relation(fields: [userId], references: [id])
   flashcardId String
-  flashcard   Flashcard @relation(fields: [flashcardId], references: [id])
+  flashcard   Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
   easeFactor  Float     @default(2.5)
   intervalDays Int      @default(0)
   reps        Int       @default(0)

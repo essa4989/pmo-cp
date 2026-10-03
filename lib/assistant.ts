@@ -75,6 +75,38 @@ function snippetAround(text: string, queryTokens: string[], maxLen = 220): strin
   return (start > 0 ? "… " : "") + text.slice(start, end) + (end < text.length ? " …" : "");
 }
 
+export type RelatedGlossaryTerm = {
+  termAr: string;
+  termEn: string;
+  definition: string;
+  sourceTag: string;
+};
+
+// Surfaces the glossary terms most relevant to a given lesson by reusing
+// the same retrieval scoring as the assistant's search — never guesses or
+// hardcodes a lesson→term mapping, just ranks real glossary entries by how
+// much vocabulary they share with the lesson's own verified text.
+export async function relatedGlossaryTerms(lessonPlainText: string, limit = 3): Promise<RelatedGlossaryTerm[]> {
+  const queryTokens = tokenizeQuery(lessonPlainText).filter((t) => t.length >= 3);
+  if (queryTokens.length === 0) return [];
+
+  const glossary = await prisma.glossaryTerm.findMany();
+  const scored = glossary
+    .map((g) => ({
+      term: g,
+      score: scoreText(`${g.termAr} ${g.termEn}`, queryTokens) * 2 + scoreText(g.definition, queryTokens),
+    }))
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, limit).map((s) => ({
+    termAr: s.term.termAr,
+    termEn: s.term.termEn,
+    definition: s.term.definition,
+    sourceTag: s.term.sourceTag,
+  }));
+}
+
 // Pure retrieval over the verified curriculum content — never invents text,
 // only surfaces and ranks what already exists in the database.
 export async function searchCurriculum(query: string, limit = 5): Promise<AssistantMatch[]> {

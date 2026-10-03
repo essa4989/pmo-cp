@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
+import { extractRecallPairs } from "../lib/recall";
 
 const prisma = new PrismaClient();
 
@@ -108,6 +109,12 @@ async function main() {
     "utf-8"
   );
   const data: Curriculum = JSON.parse(raw);
+  const lessonRecallSeeds: {
+    lessonCode: string;
+    lessonId: string;
+    domainId: number;
+    pairs: ReturnType<typeof extractRecallPairs>;
+  }[] = [];
 
   console.log("Seeding domains + tasks...");
   await prisma.domain.upsert({
@@ -202,6 +209,11 @@ async function main() {
       },
     });
 
+    const pairs = extractRecallPairs(l.content_html);
+    if (pairs.length > 0) {
+      lessonRecallSeeds.push({ lessonCode: lesson.code, lessonId: lesson.id, domainId: lesson.domainId, pairs });
+    }
+
     const scenario = extractScenario(l.content_html);
     if (scenario) {
       const existing = await prisma.caseStudy.findFirst({
@@ -272,34 +284,64 @@ async function main() {
     });
   }
 
-  console.log("Seeding flashcards from glossary and exam traps...");
-  await prisma.flashcard.deleteMany({});
+  console.log("Seeding flashcards (glossary, exam traps, and each lesson's own active-recall)...");
+  // Upserted by a deterministic sourceKey instead of delete-then-recreate:
+  // recreating with fresh ids on every seed would orphan every learner's
+  // UserFlashcardState (losing their review history) and, once any state
+  // row exists, would crash the next deploy's seed step outright (FK
+  // violation on delete). Stale cards (sourceKey no longer produced by the
+  // current curriculum) are removed explicitly below instead.
+  const flashcardSeeds: { sourceKey: string; front: string; back: string; domainId: number; lessonId?: string }[] = [];
+
   const glossaryTerms = await prisma.glossaryTerm.findMany();
   const domainIdByOrder = [1, 2, 3, 4, 5, 6];
   for (let i = 0; i < glossaryTerms.length; i++) {
     const g = glossaryTerms[i];
-    const domainId = domainIdByOrder[i % domainIdByOrder.length];
-    await prisma.flashcard.create({
-      data: {
-        front: `${g.termAr} (${g.termEn})`,
-        back: g.definition,
-        domainId,
-      },
+    flashcardSeeds.push({
+      sourceKey: `glossary:${g.termAr}`,
+      front: `${g.termAr} (${g.termEn})`,
+      back: g.definition,
+      domainId: domainIdByOrder[i % domainIdByOrder.length],
     });
   }
 
   const examTraps = await prisma.examTrap.findMany({ orderBy: { n: "asc" } });
   for (let i = 0; i < examTraps.length; i++) {
     const t = examTraps[i];
-    const domainId = domainIdByOrder[i % domainIdByOrder.length];
-    await prisma.flashcard.create({
-      data: {
-        front: `فخّ الامتحان: ${t.trap}`,
-        back: `الخيار الجذّاب الخاطئ: ${t.wrongChoice}\nالمنطق الصحيح: ${t.correctLogic}`,
-        domainId,
-      },
+    flashcardSeeds.push({
+      sourceKey: `trap:${t.n}`,
+      front: `فخّ الامتحان: ${t.trap}`,
+      back: `الخيار الجذّاب الخاطئ: ${t.wrongChoice}\nالمنطق الصحيح: ${t.correctLogic}`,
+      domainId: domainIdByOrder[i % domainIdByOrder.length],
     });
   }
+
+  for (const { lessonCode, lessonId, domainId, pairs } of lessonRecallSeeds) {
+    pairs.forEach((pair, i) => {
+      flashcardSeeds.push({
+        sourceKey: `lesson:${lessonCode}:${i}`,
+        front: pair.question,
+        back: pair.answer,
+        domainId,
+        lessonId,
+      });
+    });
+  }
+
+  for (const f of flashcardSeeds) {
+    await prisma.flashcard.upsert({
+      where: { sourceKey: f.sourceKey },
+      update: { front: f.front, back: f.back, domainId: f.domainId, lessonId: f.lessonId ?? null },
+      create: f,
+    });
+  }
+  // Retires stale cards (content no longer produced by the curriculum) and
+  // any legacy row predating the sourceKey column (sourceKey still null).
+  await prisma.flashcard.deleteMany({
+    where: {
+      OR: [{ sourceKey: null }, { sourceKey: { notIn: flashcardSeeds.map((f) => f.sourceKey) } }],
+    },
+  });
 
   console.log("Seeding sources...");
   await prisma.source.deleteMany({});

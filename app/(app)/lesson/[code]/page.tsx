@@ -6,9 +6,13 @@ import { Badge, Card } from "@/components/ui";
 import MarkStarted from "@/components/MarkStarted";
 import QuickCheck from "@/components/QuickCheck";
 import MarkCompleteButton from "@/components/MarkCompleteButton";
-import LessonListen from "@/components/LessonListen";
+import LessonAudioTabs from "@/components/LessonAudioTabs";
+import LessonFlashcards from "@/components/LessonFlashcards";
+import ExtraPractice from "@/components/ExtraPractice";
 import { getLessonLockState } from "@/lib/progress";
 import { lessonTextForSpeech } from "@/lib/tts";
+import { buildPodcastScript } from "@/lib/podcastScript";
+import { relatedGlossaryTerms } from "@/lib/assistant";
 
 export default async function LessonPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -43,6 +47,21 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
   const candidateQuestions = await prisma.question.findMany({ where: quickCheckWhere, take: 30 });
   const quickCheckQuestion =
     candidateQuestions.find((q) => !attemptedIds.has(q.id)) ?? candidateQuestions[0] ?? null;
+  const extraQuestions = candidateQuestions
+    .filter((q) => q.id !== quickCheckQuestion?.id)
+    .slice(0, 2)
+    .map((q) => ({
+      id: q.id,
+      questionText: q.questionText,
+      options: JSON.parse(q.optionsJson) as string[],
+      answerIndex: q.answerIndex,
+      rationale: q.rationale,
+    }));
+
+  const [lessonFlashcards, relatedTerms] = await Promise.all([
+    prisma.flashcard.findMany({ where: { lessonId: lesson.id } }),
+    relatedGlossaryTerms(`${lesson.titleAr} ${lesson.summaryAr} ${lesson.keyFactsAr}`, 3),
+  ]);
 
   const status = progress?.status ?? "NOT_STARTED";
 
@@ -118,12 +137,15 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
       </Card>
 
       <div className="mt-4">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-700">
-          <span>🎧</span>
-          <span>استماع للدرس — خيار موازٍ للقراءة</span>
-        </div>
-        <LessonListen
+        <LessonAudioTabs
+          lessonCode={lesson.code}
           text={lessonTextForSpeech({
+            titleAr: lesson.titleAr,
+            summaryAr: lesson.summaryAr,
+            keyFactsAr: lesson.keyFactsAr,
+            contentHtml: lesson.contentHtml,
+          })}
+          turns={buildPodcastScript({
             titleAr: lesson.titleAr,
             summaryAr: lesson.summaryAr,
             keyFactsAr: lesson.keyFactsAr,
@@ -149,6 +171,34 @@ export default async function LessonPage({ params }: { params: Promise<{ code: s
             </Link>
           ))}
         </Card>
+      )}
+
+      {relatedTerms.length > 0 && (
+        <Card className="mt-4">
+          <div className="text-xs font-semibold text-brand-700">مصطلحات ذات صلة بهذا الدرس</div>
+          <div className="mt-2 flex flex-col gap-2">
+            {relatedTerms.map((t) => (
+              <div key={t.termAr} className="rounded-lg border border-line bg-surface-2 p-2">
+                <p className="text-sm font-semibold text-ink">
+                  {t.termAr} <span className="ltr-num text-muted">({t.termEn})</span>
+                </p>
+                <p className="mt-1 text-xs leading-6 text-muted">{t.definition}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <div className="mt-4">
+        <LessonFlashcards
+          cards={lessonFlashcards.map((c) => ({ id: c.id, front: c.front, back: c.back }))}
+        />
+      </div>
+
+      {extraQuestions.length > 0 && (
+        <div className="mt-4">
+          <ExtraPractice questions={extraQuestions} />
+        </div>
       )}
 
       <div className="mt-5">
