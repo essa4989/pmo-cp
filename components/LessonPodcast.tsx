@@ -45,11 +45,44 @@ export default function LessonPodcast({ lessonCode, turns }: { lessonCode: strin
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
   const [showTranscript, setShowTranscript] = useState(false);
+  // "" means "auto-pick" — explicit choices are remembered per browser so a
+  // learner who picks voices once doesn't have to redo it on every lesson.
+  const [voiceAURI, setVoiceAURI] = useState("");
+  const [voiceBURI, setVoiceBURI] = useState("");
 
   const chunks = useMemo(() => chunkTurns(turns), [turns]);
   const indexRef = useRef(0);
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const voicesRef = useRef<[SpeechSynthesisVoice | null, SpeechSynthesisVoice | null]>([null, null]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      try {
+        const savedA = localStorage.getItem("pmocp_podcast_voiceA");
+        const savedB = localStorage.getItem("pmocp_podcast_voiceB");
+        if (savedA) setVoiceAURI(savedA);
+        if (savedB) setVoiceBURI(savedB);
+      } catch {
+        // localStorage unavailable (private mode, blocked site data, ...) —
+        // auto-pick stays the default, nothing else to do.
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function chooseVoice(speaker: "A" | "B", uri: string) {
+    if (speaker === "A") setVoiceAURI(uri);
+    else setVoiceBURI(uri);
+    try {
+      localStorage.setItem(speaker === "A" ? "pmocp_podcast_voiceA" : "pmocp_podcast_voiceB", uri);
+    } catch {
+      // Best-effort only — the in-memory state above still works this session.
+    }
+  }
 
   // Probe the optional server-generated AI voice track once; if it's not
   // configured (no API key on the server) or fails, fall straight through
@@ -94,12 +127,26 @@ export default function LessonPodcast({ lessonCode, turns }: { lessonCode: strin
   }, []);
 
   const arabicVoices = useMemo(() => voices.filter((v) => v.lang.toLowerCase().startsWith("ar")), [voices]);
+  // Arabic voices first (most relevant), then the rest — same list for both
+  // speaker pickers so a learner can also deliberately pick two non-Arabic
+  // voices if that's what sounds best on their device.
+  const pickableVoices = useMemo(() => {
+    const arabicSet = new Set(arabicVoices);
+    return [...arabicVoices, ...voices.filter((v) => !arabicSet.has(v))];
+  }, [arabicVoices, voices]);
+
   useEffect(() => {
     const pool = arabicVoices.length > 0 ? arabicVoices : voices;
-    // Prefer two distinct installed voices for A/B when available; otherwise
-    // reuse the same voice for both and lean on the pitch/rate difference.
-    voicesRef.current = [pool[0] ?? null, pool[1] ?? pool[0] ?? null].filter(Boolean) as SpeechSynthesisVoice[];
-  }, [arabicVoices, voices]);
+    // Explicit picks win; otherwise auto-pick two distinct installed voices
+    // when available, falling back to one voice (pitch/rate still differs).
+    const auto: [SpeechSynthesisVoice | null, SpeechSynthesisVoice | null] = [
+      pool[0] ?? null,
+      pool[1] ?? pool[0] ?? null,
+    ];
+    const chosenA = voices.find((v) => v.voiceURI === voiceAURI) ?? auto[0];
+    const chosenB = voices.find((v) => v.voiceURI === voiceBURI) ?? auto[1];
+    voicesRef.current = [chosenA, chosenB];
+  }, [arabicVoices, voices, voiceAURI, voiceBURI]);
 
   function speakBrowserFrom(index: number) {
     const synth = window.speechSynthesis;
@@ -254,6 +301,41 @@ export default function LessonPodcast({ lessonCode, turns }: { lessonCode: strin
           {mode === "ai" ? "🤖 صوت AI" : "🔊 صوت المتصفح (مجاني)"}
         </span>
       </div>
+
+      {mode === "browser" && pickableVoices.length > 0 && (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="flex flex-col gap-1 text-[11px] text-muted">
+            صوت {SPEAKER_LABEL.A}
+            <select
+              value={voiceAURI}
+              onChange={(e) => chooseVoice("A", e.target.value)}
+              className="rounded-lg border border-line px-2 py-1.5 text-xs text-ink"
+            >
+              <option value="">تلقائي</option>
+              {pickableVoices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name} ({v.lang})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] text-muted">
+            صوت {SPEAKER_LABEL.B}
+            <select
+              value={voiceBURI}
+              onChange={(e) => chooseVoice("B", e.target.value)}
+              className="rounded-lg border border-line px-2 py-1.5 text-xs text-ink"
+            >
+              <option value="">تلقائي</option>
+              {pickableVoices.map((v) => (
+                <option key={v.voiceURI} value={v.voiceURI}>
+                  {v.name} ({v.lang})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {mode === "browser" && showTranscript && currentChunk && state !== "idle" && (
         <p className="mt-3 rounded-lg bg-surface-2 p-2 text-xs leading-6 text-ink">
